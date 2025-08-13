@@ -1,10 +1,10 @@
 from fastapi import HTTPException, status
-from models.course import CourseCreate
+from models.course import CourseCreate,CourseInsertion
 from database.supabase_client import SupabaseClient
 
 supabase = SupabaseClient().get_client()
 
-async def create_course_controller(course: CourseCreate):
+async def create_course_controller(course: CourseCreate, professor_id: int):
     prof_result = supabase.table("professors").select("id").eq("id", course.professor_id).execute()
     if not prof_result.data:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Professor not found")
@@ -13,7 +13,10 @@ async def create_course_controller(course: CourseCreate):
     if existing_course.data:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Course with this code already exists")
 
-    result = supabase.table("courses").insert(course.model_dump()).execute()
+    course_data = course.model_dump()
+    course_insertion = CourseInsertion(**course_data, professor_id=professor_id)
+
+    result = supabase.table("courses").insert(course_insertion.model_dump()).execute()
     if not result.data:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to create course")
 
