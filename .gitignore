@@ -1,0 +1,47 @@
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pkl
+*.tmp
+
+# Environment variables
+.env
+.env.*
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+
+# Byte-compiled / optimized / DLL files
+*.so
+*.dll
+*.dylib
+
+# Logs
+*.log
+
+# IDE / editor settings
+.vscode/
+.idea/
+
+# macOS system files
+.DS_Store
+
+# pyenv
+.python-version
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Coverage / testing
+.coverage
+htmlcov/
+.cache/
+pytest_cache/
