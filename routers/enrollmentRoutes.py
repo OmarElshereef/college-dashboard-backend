@@ -33,6 +33,15 @@ async def get_course_students(course_id: int):
     return await controller.get_course_students_controller(course_id)
 
 # Unenroll student from course
-@router.delete("/enrollments/{student_id}/{course_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(verify_professor)])
-async def unenroll_student(student_id: int, course_id: int):
-    return await controller.unenroll_student_controller(student_id, course_id)
+# Professor removes a student from a course
+@router.delete("/enrollments/{student_id}/{course_id}",status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(verify_professor)]) 
+async def unenroll_student_as_professor(student_id: int, course_id: int,request: Request):
+    professor_id = request.state.user_id
+    return await controller.unenroll_student_as_professor(student_id, course_id,professor_id)
+
+
+# Student removes themselves from a course
+@router.delete("/enrollments/{course_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(verify_student)])
+async def unenroll_self_from_course(course_id: int, request: Request):
+    student_id = request.state.user_id
+    return await controller.unenroll_self(student_id, course_id)
