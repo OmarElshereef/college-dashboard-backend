@@ -11,9 +11,13 @@ class CourseCreate(BaseModel):
     name: str
     code: str
     description: Optional[str] = None
-    professor_id: int
     max_students: int = 50
     current_enrollment: int = 0
+
+
+class CourseInsertion(CourseCreate):
+    professor_id: int
+
 
 class Course(BaseModel):
     id: int
