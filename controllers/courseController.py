@@ -5,7 +5,7 @@ from database.supabase_client import SupabaseClient
 supabase = SupabaseClient().get_client()
 
 async def create_course_controller(course: CourseCreate, professor_id: int):
-    prof_result = supabase.table("professors").select("id").eq("id", course.professor_id).execute()
+    prof_result = supabase.table("professors").select("id").eq("id", professor_id).execute()
     if not prof_result.data:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Professor not found")
 
