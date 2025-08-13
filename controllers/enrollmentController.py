@@ -105,7 +105,7 @@ async def get_course_students_controller(course_id: int):
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
-async def unenroll_student_controller(student_id: int, course_id: int):
+async def unenroll_self(student_id: int, course_id: int):
     try:
         
         enrollment = supabase.table("enrollments").select("*").eq("student_id", student_id).eq("course_id", course_id).execute()
@@ -124,6 +124,49 @@ async def unenroll_student_controller(student_id: int, course_id: int):
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Course not found")
             
         course = course_result.data[0]
+        new_count = max(0, course["current_enrollment"] - 1)  
+        update_result = supabase.table("courses").update({
+            "current_enrollment": new_count
+        }).eq("id", course_id).execute()  
+        
+        if not update_result.data:
+            
+            supabase.table("enrollments").insert({
+                "student_id": student_id,
+                "course_id": course_id
+            }).execute()
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to update enrollment count")
+        
+        return None
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
+
+async def unenroll_student_as_professor(student_id: int, course_id: int, professor_id: int):
+    try:
+        
+        course_check = supabase.table("courses").select("*").eq("id", course_id).execute()
+        if not course_check.data:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Course not found")
+
+        if not course_check.data[0]["professor_id"] == professor_id:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You are not authorized to unenroll students from this course")
+        
+        enrollment = supabase.table("enrollments").select("*").eq("student_id", student_id).eq("course_id", course_id).execute()
+        if not enrollment.data:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Enrollment not found")
+        
+        
+        delete_result = supabase.table("enrollments").delete().eq("student_id", student_id).eq("course_id", course_id).execute()
+        
+        if not delete_result.data:
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to delete enrollment")
+        
+        
+        course = course_check.data[0]
         new_count = max(0, course["current_enrollment"] - 1)  
         update_result = supabase.table("courses").update({
             "current_enrollment": new_count
