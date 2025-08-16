@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, status,Depends
+from fastapi import APIRouter, HTTPException, status,Depends,Request
 from database.supabase_client import SupabaseClient
 from models.course import Course, CourseCreate
 from typing import List
@@ -15,8 +15,9 @@ supabase = SupabaseClient().get_client()
 # Course endpoints
 #create_course
 @router.post("/courses", response_model=Course, status_code=status.HTTP_201_CREATED, dependencies=[Depends(verify_professor)])
-async def create_course(course: CourseCreate):
-    return await controller.create_course_controller(course)
+async def create_course(course: CourseCreate,request: Request):
+    professor_id = request.state.user_id
+    return await controller.create_course_controller(course,professor_id)
 
 #get_all_courses
 @router.get("/courses", response_model=List[Course], dependencies=[Depends(verify_token)])
