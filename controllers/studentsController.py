@@ -1,7 +1,7 @@
 from fastapi import HTTPException, status, Response, UploadFile
 from typing import List
-from models.student import StudentCreate, StudentInsertion, StudentLogin,StudentReturn,Student
-from models.user import UserInsertStudent
+
+from models.user import StudentCreate, UserLogin, UserReturn,User, StudentInsert
 
 from utils.auth import create_access_token,hash_password, verify_password
 from utils.multer import upload_to_supabase_storage
@@ -16,120 +16,108 @@ db = MongoDBClient.get_client()
 supabase = SupabaseClient().get_client()
 
 
+
+users_collection = db["users"]
+
 async def signup_student_logic(student: StudentCreate, response: Response):
-    existing = supabase.table("users").select("*").eq("email", student.email).execute()
-    if existing.data:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="user with this email already exists")
-
-    insertion = UserInsertStudent(
-        role="student",
-        email=student.email,
-        password=hash_password(student.password),
-        created_at=datetime.now(),
-    )
-
-    user_result = supabase.table("users").insert(insertion.model_dump(mode="json")).execute()
-    if not user_result.data:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to create user")
     
-    user = user_result.data[0]
+    existing = await users_collection.find_one({"email": student.email})
+    if existing:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="User with this email already exists"
+        )
 
-    user_id = user["id"]
+    
+    student.password = hash_password(student.password)
+    insertion = StudentInsert(
+        **student.model_dump(),
+        created_at=datetime.now())
 
-    student_insertion = StudentInsertion(
-        id=user_id,
-        name=student.name)
+    user_doc = insertion.to_user_doc()
 
-
-
-    student_result = supabase.table("students").insert(student_insertion.model_dump()).execute()
-    if not student_result.data:
-        supabase.table("users").delete().eq("id", user_id).execute()
+    
+    result = await users_collection.insert_one(user_doc)
+    if not result.inserted_id:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to create student profile"
+            detail="Failed to create user"
         )
-    
-    
-    token = create_access_token({"user_id": user_id, "role": "student"})
 
+    
+    token = create_access_token({"user_id": str(result.inserted_id), "role": "student"})
 
-    return_student = StudentReturn(
-        name= student.name,
-        id=user_id,
-        email=student.email,
-        created_at=user["created_at"],
+    
+    return_user = UserReturn(
+        id=str(result.inserted_id),
+        name=insertion.name,
+        email=insertion.email,
+        role="student",
+        created_at=insertion.created_at,
+        profile=user_doc["profile"],
         token=token
     )
 
+    return return_user
 
-    return return_student
-
-async def login_student_logic(student: StudentLogin, response: Response):
-    user_result = supabase.table("users").select("*").eq("email", student.email).execute()
-    if not user_result.data:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+async def login_student_logic(student: UserLogin, response: Response):
     
-    user = user_result.data[0]
+    
+    
+    user = await users_collection.find_one({"email": student.email})
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, 
+            detail="User not found"
+        )
 
     if user.get("role") != "student":
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not a student account")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, 
+            detail="Not a student account"
+        )
 
     if not verify_password(student.password, user["password"]):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, 
+            detail="Invalid credentials"
+        )
 
-    student_result = supabase.table("students").select("*").eq("id", user["id"]).execute()
-    if not student_result.data:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Student profile not found")
-    
-    db_student = student_result.data[0]
-
-    token = create_access_token({"user_id": user["id"], "role": "student"})
+    token = create_access_token({
+        "user_id": str(user["_id"]), 
+        "role": "student"
+    })
 
 
-
-    return StudentReturn(
-        id = user["id"],
-        name = db_student["name"],
-        email = student.email,
-        created_at = user["created_at"],
+    return_user = UserReturn(
+        **user,
         token=token
     )
+
+    return return_user
 
 
 async def get_all_students_logic():
-    result = supabase.table("students").select("id, name, users(email, created_at)").execute()
-    if not result.data:
+    result = await users_collection.find({"role": "student"}).to_list(length=None)
+
+
+    if not result:
         return []
+    students = [User(**student) for student in result]
+    return students
 
-    return [Student.from_supabase(row) for row in result.data]
+async def get_student_logic(student_id: str):
+    student = await users_collection.find_one({"_id": ObjectId(student_id), "role": "student"})
+    if not student:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, 
+            detail="Student not found"
+        )
 
-async def get_student_logic(student_id: int):
-    result = supabase.table("students").select("id, name, users(email, created_at)").eq("id", student_id).execute()
-    if not result.data:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Student not found")
-    
-    data = result.data[0]
-
-    return Student.from_supabase(data)
+    return User(**student)
 
 async def upload_image_logic(student_id :int , file: UploadFile):
-    student_result = supabase.table("students").select("id").eq("id", student_id).execute()
-    if not student_result.data:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Student not found")
-
-    public_url_response = await upload_to_supabase_storage(file)
-    result = supabase.table("students_images").insert({
-        "student_id": student_id,
-        "image_url": public_url_response,
-    }).execute()
-
-    return result.data[0]
+    return None
 
 async def get_student_images_logic(student_id: int):
-    student_result = supabase.table("students").select("id").eq("id", student_id).execute()
-    if not student_result.data:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Student not found")
-
-    images = supabase.table("students_images").select("image_url").eq("student_id", student_id).execute()
-    return images.data
+    return None

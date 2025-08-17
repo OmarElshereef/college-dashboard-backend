@@ -1,7 +1,7 @@
 from pydantic import BaseModel, Field
 from typing import Optional
 from datetime import datetime
-from py_objectId import PyObjectId, MongoModel
+from .py_objectId import PyObjectId, MongoModel
 
 
 

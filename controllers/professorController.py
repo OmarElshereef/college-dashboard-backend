@@ -1,109 +1,129 @@
-from fastapi import HTTPException, status
-from models.professor import Professor, ProfessorCreate, ProfessorLogin, ProfessorReturn, ProfessorUpdate, ProfessorInsertion
-from models.user import UserInsertProfessor
-from database.supabase_client import SupabaseClient
+from fastapi import HTTPException, status, Response
+from models.user import (ProfessorCreate, ProfessorInsert, User, UserBase, UserReturn, UserLogin)
+from database.mongo_client import MongoDBClient
 from utils.auth import create_access_token, hash_password, verify_password
 from datetime import datetime
+from bson import ObjectId
 
-
-
-supabase = SupabaseClient().get_client()
+db = MongoDBClient.get_client()
+users_collection = db["users"]
 
 async def create_professor_logic(professor: ProfessorCreate):
-    existing = supabase.table("users").select("*").eq("email", professor.email).execute()
-    if existing.data:
+    
+    existing = await users_collection.find_one({"email": professor.email})
+    if existing:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="User with this email already exists"
         )
 
-    user_insert = UserInsertProfessor(
-        role="professor",
-        email=professor.email,
-        password=hash_password(professor.password),
-        created_at=datetime.now(),
+    professor.password = hash_password(professor.password)
+    
+    
+    insertion = ProfessorInsert(
+        **professor.model_dump(),
+        created_at=datetime.now()
     )
-    user_result = supabase.table("users").insert(user_insert.model_dump(mode="json")).execute()
-    if not user_result.data:
+
+    
+    user_doc = insertion.to_user_doc()
+
+    # Insert into MongoDB users collection
+    result = await users_collection.insert_one(user_doc)
+    if not result.inserted_id:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to create user"
         )
 
-    user = user_result.data[0]
-    user_id = user["id"]
+    # Create access token
+    token = create_access_token({
+        "user_id": str(result.inserted_id), 
+        "role": "professor"
+    })
 
-    professor_insert = ProfessorInsertion(
-        id=user_id,
-        name=professor.name,
-        department=professor.department
-    )
-
-
-    prof_result = supabase.table("professors").insert(professor_insert.model_dump()).execute()
-    if not prof_result.data:
-        supabase.table("users").delete().eq("id", user_id).execute()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to create professor profile"
-        )
-
-    prof_data = prof_result.data[0]
-
-    
-    token = create_access_token({"user_id": user_id, "role": "professor"})
-
-    return ProfessorReturn(
-        id=user_id,
-        name=professor.name,
-        email=professor.email,
-        department=professor.department,
-        created_at=user["created_at"],
+    # Return user data
+    return_user = UserReturn(
+        id=str(result.inserted_id),
+        name=insertion.name,
+        email=insertion.email,
+        role="professor",
+        created_at=insertion.created_at,
+        profile=user_doc["profile"],
         token=token
     )
 
+    return return_user
 
-
-
-async def login_professor_logic(professor: ProfessorLogin):
-    user_result = supabase.table("users").select("*").eq("email", professor.email).execute()
-    if not user_result.data:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+async def login_professor_logic(professor: UserLogin):
     
-    user = user_result.data[0]
+    user = await users_collection.find_one({"email": professor.email})
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, 
+            detail="User not found"
+        )
 
     
     if user.get("role") != "professor":
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not a professor account")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, 
+            detail="Not a professor account"
+        )
 
-    
     if not verify_password(professor.password, user["password"]):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, 
+            detail="Invalid credentials"
+        )
 
-    
-    professor_result = supabase.table("professors").select("*").eq("id", user["id"]).execute()
-    if not professor_result.data:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Professor profile not found")
-    
-    db_professor = professor_result.data[0]
+    token = create_access_token({
+        "user_id": str(user["_id"]), 
+        "role": "professor"
+    })
 
-    
-    token = create_access_token({"user_id": user["id"], "role": "professor"})
-
-    
-    return ProfessorReturn(
-        id=user["id"],
-        name=db_professor["name"],
-        email=professor.email,
-        department=db_professor["department"],
-        created_at=user["created_at"],
+    return_user = UserReturn(
+        **user,
         token=token
     )
 
+    return return_user
 
 async def get_all_professors_logic():
-    result = supabase.table("professors").select("id, name, department, users(email, created_at)").execute()
-    if not result.data:
+    # Find all users with professor role
+    result = await users_collection.find({"role": "professor"}).to_list(length=None)
+    if not result:
         return []
+    professors = [User(**professor) for professor in result]
+    
+    return professors
 
-    return [Professor.from_supabase(row) for row in result.data]
+
+async def get_professor_logic(professor_id: str):
+    try:
+        
+        if not ObjectId.is_valid(professor_id):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid professor ID format"
+            )
+        
+        professor = await users_collection.find_one({
+            "_id": ObjectId(professor_id),
+            "role": "professor"
+        })
+        
+        if not professor:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, 
+                detail="Professor not found"
+            )
+        
+        return User(**professor)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve professor: {str(e)}"
+        )

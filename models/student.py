@@ -3,7 +3,6 @@ from sqlmodel import Field, SQLModel, Relationship
 from typing import Optional
 from datetime import datetime
 from typing import List
-from py_objectId import PyObjectId, MongoModel
 
 
 
