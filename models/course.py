@@ -1,8 +1,8 @@
-from pydantic import BaseModel, EmailStr, HttpUrl
-from sqlmodel import Field, SQLModel, Relationship
+from pydantic import BaseModel, Field
 from typing import Optional
 from datetime import datetime
-from typing import List
+from py_objectId import PyObjectId, MongoModel
+
 
 
 
@@ -15,16 +15,17 @@ class CourseCreate(BaseModel):
     current_enrollment: int = 0
 
 
-class CourseInsertion(CourseCreate):
-    professor_id: int
+class CourseInsertion(CourseCreate, MongoModel):
+    professor_id: PyObjectId
 
 
-class Course(BaseModel):
-    id: int
+class Course(MongoModel):
+    id: PyObjectId = Field(..., alias="_id")
     name: str
     code: str
     description: Optional[str]
-    professor_id: int
+    professor_id: PyObjectId
     max_students: int
     current_enrollment: int
     created_at: datetime
+

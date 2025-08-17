@@ -6,7 +6,13 @@ from models.user import UserInsertStudent
 from utils.auth import create_access_token,hash_password, verify_password
 from utils.multer import upload_to_supabase_storage
 from database.supabase_client import SupabaseClient
+from database.mongo_client import MongoDBClient
 from datetime import datetime
+from bson import ObjectId
+
+
+
+db = MongoDBClient.get_client()
 supabase = SupabaseClient().get_client()
 
 
