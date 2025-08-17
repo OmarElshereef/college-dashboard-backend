@@ -6,9 +6,12 @@ from bson import ObjectId
 db = MongoDBClient.get_client()
 
 
+users_collection = db["users"]
+courses_collection = db["courses"]
+
 async def create_course_controller(course: CourseCreate, professor_id: str):
     
-    prof = await db["professors"].find_one({"_id": ObjectId(professor_id)})
+    prof = await users_collection.find_one({"_id": ObjectId(professor_id), "role": "professor"})
     if not prof:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -16,7 +19,7 @@ async def create_course_controller(course: CourseCreate, professor_id: str):
         )
 
     
-    existing_course = await db["courses"].find_one({"code": course.code})
+    existing_course = await courses_collection.find_one({"code": course.code})
     if existing_course:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -27,11 +30,11 @@ async def create_course_controller(course: CourseCreate, professor_id: str):
     course_data = course.model_dump()
     course_insertion = CourseInsertion(
         **course_data,
-        professor_id=ObjectId(professor_id)
+        professor_id=professor_id
     )
 
     
-    insert_result = await db["courses"].insert_one(course_insertion.model_dump())
+    insert_result = await courses_collection.insert_one(course_insertion.model_dump())
 
     if not insert_result.inserted_id:
         raise HTTPException(
@@ -40,23 +43,20 @@ async def create_course_controller(course: CourseCreate, professor_id: str):
         )
 
     
-    created_course = await db["courses"].find_one({"_id": insert_result.inserted_id})
-    return Course(**created_course)
+    created_course = await courses_collection.find_one({"_id": insert_result.inserted_id})
+    print(f"Created course: {created_course}")
+    return Course(** created_course)
 
 
 
 async def get_all_courses_controller():
-    try:
-        cursor = db["courses"].find({})
-        courses = []
-        async for course in cursor:
-            courses.append(Course(**course))
-        return courses
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
-            detail=f"Failed to fetch courses: {str(e)}"
-        )
+
+    result = await courses_collection.find().to_list(length=None)
+    if not result:
+        return []
+    courses = [Course(**course) for course in result]
+    return courses
+
 
 
 
@@ -68,7 +68,7 @@ async def get_course_controller(course_id: str):
                 detail="Invalid course ID"
             )
 
-        course = await db["courses"].find_one({"_id": ObjectId(course_id)})
+        course = await courses_collection.find_one({"_id": ObjectId(course_id)})
         if not course:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,

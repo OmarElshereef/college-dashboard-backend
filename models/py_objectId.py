@@ -57,9 +57,3 @@ class MongoModel(BaseModel):
         "json_encoders": {ObjectId: str},
     }
 
-
-""" class MongoModel(BaseModel):
-    class Config:
-        populate_by_name = True
-        arbitrary_types_allowed = True
-        json_encoders = {ObjectId: str} """

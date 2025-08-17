@@ -2,7 +2,7 @@ from pydantic import BaseModel, Field
 from typing import Optional
 from datetime import datetime
 from .py_objectId import PyObjectId, MongoModel
-
+from bson import ObjectId
 
 
 
@@ -17,14 +17,15 @@ class CourseCreate(BaseModel):
 
 class CourseInsertion(CourseCreate, MongoModel):
     professor_id: PyObjectId
+    created_at: datetime = Field(default_factory=datetime.now)
 
 
 class Course(MongoModel):
-    id: PyObjectId = Field(..., alias="_id")
+    id: ObjectId = Field(default_factory=PyObjectId, alias="_id")
     name: str
     code: str
     description: Optional[str]
-    professor_id: PyObjectId
+    professor_id: ObjectId
     max_students: int
     current_enrollment: int
     created_at: datetime
