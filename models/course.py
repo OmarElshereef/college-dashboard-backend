@@ -5,8 +5,6 @@ from .py_objectId import PyObjectId, MongoModel
 from bson import ObjectId
 
 
-
-
 class CourseCreate(BaseModel):
     name: str
     code: str
@@ -21,12 +19,11 @@ class CourseInsertion(CourseCreate, MongoModel):
 
 
 class Course(MongoModel):
-    id: ObjectId = Field(default_factory=PyObjectId, alias="_id")
+    id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
     name: str
     code: str
     description: Optional[str]
-    professor_id: ObjectId
+    professor_id: PyObjectId
     max_students: int
     current_enrollment: int
     created_at: datetime
-
