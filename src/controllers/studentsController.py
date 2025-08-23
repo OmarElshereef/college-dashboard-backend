@@ -1,12 +1,10 @@
 from fastapi import HTTPException, status, Response, UploadFile
-from typing import List
 
-from models.user import StudentCreate, UserLogin, UserReturn,User, StudentInsert
+from src.models.user import StudentCreate, UserLogin, UserReturn,User, StudentInsert
 
-from utils.auth import create_access_token,hash_password, verify_password
-from utils.multer import upload_to_supabase_storage
-from database.supabase_client import SupabaseClient
-from database.mongo_client import MongoDBClient
+from src.utils.auth import create_access_token,hash_password, verify_password
+from src.database.supabase_client import SupabaseClient
+from src.database.mongo_client import MongoDBClient
 from datetime import datetime
 from bson import ObjectId
 

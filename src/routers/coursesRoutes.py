@@ -1,9 +1,9 @@
-from fastapi import APIRouter, HTTPException, status,Depends,Request
-from database.supabase_client import SupabaseClient
-from models.course import Course, CourseCreate
+from fastapi import APIRouter, status,Depends,Request
+from src.database.supabase_client import SupabaseClient
+from src.models.course import Course, CourseCreate
 from typing import List
-from controllers import courseController as controller 
-from middlewares.authetication import verify_professor, verify_token
+from src.controllers import courseController as controller
+from src.middlewares.authetication import verify_professor, verify_token
 router = APIRouter()
 
 supabase = SupabaseClient().get_client()

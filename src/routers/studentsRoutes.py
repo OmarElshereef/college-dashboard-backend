@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Response, status, UploadFile, File, Depends,Request
 from typing import List
-from middlewares.authetication import verify_student,verify_professor
-from models.user import StudentCreate, UserLogin, UserReturn,User
-from controllers import studentsController as controller
+from src.middlewares.authetication import verify_student,verify_professor
+from src.models.user import StudentCreate, UserLogin, UserReturn,User
+from src.controllers import studentsController as controller
 
 router = APIRouter()
 

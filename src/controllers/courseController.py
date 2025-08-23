@@ -1,6 +1,6 @@
 from fastapi import HTTPException, status
-from models.course import CourseCreate,CourseInsertion, Course
-from database.mongo_client import MongoDBClient
+from src.models.course import CourseCreate,CourseInsertion, Course
+from src.database.mongo_client import MongoDBClient
 from bson import ObjectId
 
 db = MongoDBClient.get_client()

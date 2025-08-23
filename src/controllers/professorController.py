@@ -1,7 +1,7 @@
-from fastapi import HTTPException, status, Response
-from models.user import (ProfessorCreate, ProfessorInsert, User, UserBase, UserReturn, UserLogin)
-from database.mongo_client import MongoDBClient
-from utils.auth import create_access_token, hash_password, verify_password
+from fastapi import HTTPException, status
+from src.models.user import (ProfessorCreate, ProfessorInsert, User, UserReturn, UserLogin)
+from src.database.mongo_client import MongoDBClient
+from src.utils.auth import create_access_token, hash_password, verify_password
 from datetime import datetime
 from bson import ObjectId
 

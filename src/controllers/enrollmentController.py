@@ -1,10 +1,6 @@
-from fastapi import APIRouter, HTTPException, status, UploadFile, File
-from utils.multer import upload_to_supabase_storage
-from database.supabase_client import SupabaseClient
-from models.enrollment import  EnrollmentCreate, Enrollment
-from models.student import Student
-from models.course import Course
-from typing import List
+from fastapi import HTTPException, status
+from src.database.supabase_client import SupabaseClient
+from src.models.enrollment import  EnrollmentCreate
 
 supabase = SupabaseClient().get_client()
 

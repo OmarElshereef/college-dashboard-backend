@@ -1,12 +1,11 @@
-from fastapi import APIRouter, HTTPException, status, UploadFile, File,Depends, Request
-from utils.multer import upload_to_supabase_storage
-from database.supabase_client import SupabaseClient
-from models.enrollment import  EnrollmentCreate, Enrollment
-from models.student import Student
-from models.course import Course
+from fastapi import APIRouter, status, Depends, Request
+from src.database.supabase_client import SupabaseClient
+from src.models.enrollment import  EnrollmentCreate, Enrollment
+from src.models.student import Student
+from src.models.course import Course
 from typing import List
-from controllers import enrollmentController as controller
-from middlewares.authetication import verify_professor, verify_student
+from src.controllers import enrollmentController as controller
+from src.middlewares.authetication import verify_professor, verify_student
 router = APIRouter()
 
 supabase = SupabaseClient().get_client()

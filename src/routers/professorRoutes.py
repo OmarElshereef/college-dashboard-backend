@@ -1,8 +1,8 @@
 from fastapi import APIRouter, status, Depends
 from typing import List
-from models.user import ProfessorCreate, User, UserReturn,UserLogin,UserBase
-from controllers import professorController as controller
-from middlewares.authetication import verify_professor
+from src.models.user import ProfessorCreate, User, UserReturn,UserLogin
+from src.controllers import professorController as controller
+from src.middlewares.authetication import verify_professor
 
 
 router = APIRouter()

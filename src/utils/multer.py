@@ -1,6 +1,6 @@
 
 from fastapi import  UploadFile
-from database.supabase_client import SupabaseClient
+from src.database.supabase_client import SupabaseClient
 
 STORAGE_BUCKET = "images"
 
