@@ -1,5 +1,4 @@
-import os
-from dotenv import load_dotenv
+from src.utils.config import get_settings
 from motor.motor_asyncio import AsyncIOMotorClient
 
 
@@ -10,9 +9,9 @@ class MongoDBClient:
     @staticmethod
     def get_client():
         if MongoDBClient._client is None:
-            load_dotenv()
-            uri = os.environ.get("MONGO_URI")
-            db_name = os.environ.get("MONGO_DB_NAME")
+            app_settings = get_settings()
+            uri = app_settings.MONGO_URI
+            db_name = app_settings.MONGO_DB_NAME
 
             if not uri or not db_name:
                 raise ValueError("MONGO_URI and MONGO_DB_NAME must be set")
