@@ -1,7 +1,13 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from src.routers import studentsRoutes, coursesRoutes, enrollmentRoutes, professorRoutes
+from src.routers import (
+    studentsRoutes,
+    coursesRoutes,
+    enrollmentRoutes,
+    professorRoutes,
+    dataRoutes,
+)
 
 app = FastAPI(title="Student Management API", version="1.0.0")
 
@@ -15,16 +21,11 @@ app.add_middleware(
 )
 
 
-
 app.include_router(studentsRoutes.router, prefix="/students", tags=["Students"])
 app.include_router(professorRoutes.router, prefix="/professors", tags=["Professors"])
 app.include_router(coursesRoutes.router, prefix="/courses", tags=["Courses"])
 app.include_router(enrollmentRoutes.router, prefix="/enrollments", tags=["Enrollments"])
-
-
-
-
-
+app.include_router(dataRoutes.data_router, prefix="/data", tags=["Data"])
 
 
 @app.get("/")

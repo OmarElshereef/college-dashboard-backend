@@ -12,9 +12,11 @@ class Settings(BaseSettings):
     JWT_ALGORITHM: str
     JWT_EXPIRATION_MINUTES: int
 
+    FILE_ALLOWED_EXTENSIONS: list[str]
+    FILE_MAX_SIZE: int
+
     class Config:
         env_file = ".env"
-        extra = "allow"
 
 
 def get_settings() -> Settings:
